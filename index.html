@@ -453,6 +453,40 @@
         // --- GLOBAL CONFIG & GAME OBJECT ---
         const CANVAS_WIDTH = 900;
         const CANVAS_HEIGHT = 600;
+
+        // ===== PRELOADED ART ASSETS =====
+        const artImages = {};
+        const artURLs = {
+            bgLevel1: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/1e53f0ed8_generated_image.png',
+            bgLevel2: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/57034ee1a_generated_image.png',
+            bgLevel3: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/647728b86_generated_image.png',
+            panelIntro: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/1878b6ade_20260303_112557.jpg',
+            panelSisters: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/04c1b0e11_generated_image.png',
+            panelAlley: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/4fd679329_generated_image.png',
+            panelHospital: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/d804ce710_generated_image.png',
+            panelVictory: 'https://media.base44.com/images/public/69b1cf645256e83c174a7c51/a595dfb01_generated_image.png',
+        };
+        let artLoaded = 0;
+        const artTotal = Object.keys(artURLs).length;
+        for (const [key, url] of Object.entries(artURLs)) {
+            artImages[key] = new Image();
+            artImages[key].crossOrigin = 'anonymous';
+            artImages[key].onload = () => { artLoaded++; };
+            artImages[key].onerror = () => { artLoaded++; };
+            artImages[key].src = url;
+        }
+        function artReady() { return artLoaded >= artTotal; }
+        function drawArt(ctx, img, x, y, w, h, opacity) {
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.save();
+                if (opacity !== undefined) { ctx.globalAlpha = opacity; }
+                ctx.drawImage(img, x, y, w, h);
+                ctx.restore();
+                return true;
+            }
+            return false;
+        }
+
         const FLOOR_Y = 490;
 
         const keys = {};
@@ -1850,7 +1884,13 @@
 
         // TITLE SCREEN
         function drawTitleScreen(ctx) {
-            // Dark rainy title aesthetic backgound
+            // Draw intro comic panel as background
+            drawArt(ctx, artImages.panelIntro, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0.7);
+            // Dark overlay
+            ctx.fillStyle = 'rgba(2, 2, 8, 0.55)';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Rain overlay
             drawRain(ctx);
 
             ctx.textAlign = 'center';
@@ -1869,7 +1909,6 @@
             ctx.font = 'italic 24px "Courier New", monospace';
             ctx.fillText("The Sisters Plea", CANVAS_WIDTH / 2, 270);
 
-            // Instructions to trigger sound engine and begin game
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#666688';
             ctx.font = '14px "Courier New", monospace';
@@ -1879,7 +1918,6 @@
             ctx.font = 'bold 20px "Courier New", monospace';
             ctx.fillText("PRESS ANY KEY / TAP TO START", CANVAS_WIDTH / 2, 430);
 
-            // Highscore
             ctx.fillStyle = '#ffaa00';
             ctx.font = '14px "Courier New", monospace';
             ctx.fillText(`HIGH SCORE: ${game.highScore}`, CANVAS_WIDTH / 2, 530);
@@ -1946,35 +1984,52 @@
 
         // INTERSTITIAL SCREEN BETWEEN LEVELS
         function drawInterstitialScreen(ctx) {
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#00f0ff';
-            ctx.font = 'bold 36px "Courier New", monospace';
-            
+            // Show comic panel for the upcoming level
+            let panelImg = null;
             let stageName = "";
             let description = "";
             if (game.levelIndex === 0) {
+                panelImg = artImages.panelSisters;
                 stageName = "LEVEL 1: HALSTON AVENUE";
                 description = "Sneak or punch your way through usher scouts on the rainy street. Reach the right.";
             } else if (game.levelIndex === 1) {
+                panelImg = artImages.panelAlley;
                 stageName = "LEVEL 2: THE ALLEY";
                 description = "Defend injured Marcus behind you! Do not let intruders break through.";
             } else if (game.levelIndex === 2) {
+                panelImg = artImages.panelHospital;
                 stageName = "LEVEL 3: MERCY GENERAL";
                 description = "Corridor Sprint! Race against time to room 412 before security locks down.";
             }
 
-            ctx.fillText(stageName, CANVAS_WIDTH / 2, 220);
+            // Draw comic panel as background
+            drawArt(ctx, panelImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0.75);
+            // Dark gradient overlay at bottom for text readability
+            const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+            grad.addColorStop(0, 'rgba(2, 2, 8, 0.4)');
+            grad.addColorStop(0.5, 'rgba(2, 2, 8, 0.6)');
+            grad.addColorStop(1, 'rgba(2, 2, 8, 0.85)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+            ctx.textAlign = 'center';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#00f0ff';
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = 'bold 36px "Courier New", monospace';
+            ctx.fillText(stageName, CANVAS_WIDTH / 2, 200);
+
+            ctx.shadowBlur = 0;
             ctx.fillStyle = '#e0e0ed';
             ctx.font = '16px "Courier New", monospace';
             const wrapped = wrapText(ctx, description, 700);
             wrapped.forEach((line, index) => {
-                ctx.fillText(line, CANVAS_WIDTH / 2, 300 + index * 30);
+                ctx.fillText(line, CANVAS_WIDTH / 2, 380 + index * 30);
             });
 
             ctx.fillStyle = '#666688';
             ctx.font = 'bold 14px "Courier New", monospace';
-            ctx.fillText("PREPARING FOR ENCOUNTER...", CANVAS_WIDTH / 2, 450);
+            ctx.fillText("PREPARING FOR ENCOUNTER...", CANVAS_WIDTH / 2, 480);
         }
 
         // PLAYING GAMEPLAY STATE
@@ -2083,25 +2138,34 @@
 
         // LEVEL 1 GRAPHICS
         function drawLevel1Background(ctx) {
-            // Draw procedural background parallax layers
-            game.parallaxLayers.forEach((layer, index) => {
-                ctx.fillStyle = layer.color;
-                layer.rects.forEach(rect => {
-                    const drawX = rect.x - game.cameraX * layer.speed;
-                    ctx.fillRect(drawX, rect.y, rect.w, rect.h);
-
-                    // Render small glowing neon window squares inside buildings
-                    rect.windows.forEach(win => {
-                        if (win.lit) {
-                            ctx.fillStyle = win.amber ? '#ffaa00' : '#00f0ff';
-                            ctx.fillRect(drawX + win.dx, rect.y + win.dy, 8, 8);
-                        }
+            // Draw realistic noir street background image (tiled with camera scroll)
+            const bgW = 1200;
+            const bgOffset = -(game.cameraX * 0.5) % bgW;
+            if (!drawArt(ctx, artImages.bgLevel1, bgOffset, 0, bgW, CANVAS_HEIGHT)) {
+                // Fallback: procedural parallax
+                game.parallaxLayers.forEach((layer, index) => {
+                    ctx.fillStyle = layer.color;
+                    layer.rects.forEach(rect => {
+                        const drawX = rect.x - game.cameraX * layer.speed;
+                        ctx.fillRect(drawX, rect.y, rect.w, rect.h);
+                        rect.windows.forEach(win => {
+                            if (win.lit) {
+                                ctx.fillStyle = win.amber ? '#ffaa00' : '#00f0ff';
+                                ctx.fillRect(drawX + win.dx, rect.y + win.dy, 8, 8);
+                            }
+                        });
                     });
                 });
-            });
+            }
+            // Draw a second tile for seamless scrolling
+            drawArt(ctx, artImages.bgLevel1, bgOffset + bgW, 0, bgW, CANVAS_HEIGHT);
+
+            // Dark overlay for gameplay visibility
+            ctx.fillStyle = 'rgba(2, 2, 8, 0.45)';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
             // Street floor layer
-            ctx.fillStyle = '#0a0a14';
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.7)';
             ctx.fillRect(0, FLOOR_Y, CANVAS_WIDTH, CANVAS_HEIGHT - FLOOR_Y);
             ctx.strokeStyle = '#22223c';
             ctx.lineWidth = 4;
@@ -2111,7 +2175,7 @@
             ctx.fillStyle = '#101020';
             ctx.fillRect(0, FLOOR_Y - 20, CANVAS_WIDTH, 20);
 
-            // Draw glowing Blue Wren neon sign asset in background
+            // Draw glowing Blue Wren neon sign
             ctx.save();
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#00f0ff';
@@ -2120,7 +2184,7 @@
             ctx.fillText("BLUE WREN", 700 - game.cameraX * 0.8, 120);
             ctx.restore();
 
-            // Streetlights pools
+            // Streetlight pools (overlay on image)
             const lightPoints = [400, 1100, 1800, 2500];
             lightPoints.forEach(lx => {
                 const drawLx = lx - game.cameraX;
@@ -2131,8 +2195,6 @@
                 ctx.beginPath();
                 ctx.ellipse(drawLx, FLOOR_Y, 120, 30, 0, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Post outline shape
                 ctx.strokeStyle = '#202030';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -2144,30 +2206,35 @@
 
         // LEVEL 2 GRAPHICS
         function drawLevel2Background(ctx) {
-            // Dark Alley Brick Wall background
-            ctx.fillStyle = '#07070f';
-            ctx.fillRect(0, 0, CANVAS_WIDTH, FLOOR_Y);
-
-            // Draw brick wall lines
-            ctx.strokeStyle = '#12121c';
-            ctx.lineWidth = 2;
-            for (let y = 50; y < FLOOR_Y; y += 30) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(CANVAS_WIDTH, y);
-                ctx.stroke();
+            // Draw realistic alley background image
+            if (!drawArt(ctx, artImages.bgLevel2, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)) {
+                // Fallback: procedural brick wall
+                ctx.fillStyle = '#07070f';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, FLOOR_Y);
+                ctx.strokeStyle = '#12121c';
+                ctx.lineWidth = 2;
+                for (let y = 50; y < FLOOR_Y; y += 30) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(CANVAS_WIDTH, y);
+                    ctx.stroke();
+                }
             }
 
+            // Dark overlay for gameplay visibility
+            ctx.fillStyle = 'rgba(2, 2, 8, 0.5)';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
             // Left/Right side columns
-            ctx.fillStyle = '#0c0c16';
+            ctx.fillStyle = 'rgba(12, 12, 22, 0.8)';
             ctx.fillRect(0, 0, 80, FLOOR_Y);
             ctx.fillRect(CANVAS_WIDTH - 80, 0, 80, FLOOR_Y);
 
             // Wet ground
-            ctx.fillStyle = '#0a0a14';
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.7)';
             ctx.fillRect(0, FLOOR_Y, CANVAS_WIDTH, CANVAS_HEIGHT - FLOOR_Y);
 
-            // Fire exit metal stairs drawing silhouette
+            // Fire exit metal stairs silhouette
             ctx.strokeStyle = '#1a1a2e';
             ctx.lineWidth = 4;
             ctx.strokeRect(90, 80, 160, 250);
@@ -2176,11 +2243,11 @@
             ctx.moveTo(90, 220); ctx.lineTo(250, 280);
             ctx.stroke();
 
-            // Flickering lighting spotlight overhead
+            // Flickering lighting spotlight
             const flicker = Math.random() > 0.06;
             if (flicker) {
                 const grad = ctx.createRadialGradient(CANVAS_WIDTH/2, 100, 50, CANVAS_WIDTH/2, 100, 450);
-                grad.addColorStop(0, 'rgba(240, 220, 180, 0.15)');
+                grad.addColorStop(0, 'rgba(240, 220, 180, 0.12)');
                 grad.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grad;
                 ctx.beginPath();
@@ -2355,6 +2422,12 @@
 
         // VICTORY SCREEN
         function drawVictoryScreen(ctx) {
+            // Draw victory comic panel
+            drawArt(ctx, artImages.panelVictory, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0.7);
+            // Dark overlay
+            ctx.fillStyle = 'rgba(2, 2, 8, 0.5)';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
             drawRain(ctx);
 
             ctx.textAlign = 'center';
